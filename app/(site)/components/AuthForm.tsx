@@ -4,13 +4,16 @@ import Input from "@/app/components/inputs/input";
 import React, { useCallback, useState } from "react";
 import { FieldValues, SubmitHandler, useForm } from "react-hook-form";
 import AuthSocialButton from "./AuthSocialButton";
-import { BsGithub, BsGoogle  } from 'react-icons/bs';
+import { BsGithub, BsGoogle } from "react-icons/bs";
 import axios from "axios";
+import { toast } from "react-hot-toast";
+import { signIn } from "next-auth/react";
+import router from "next/router";
 
 type Variant = "LOGIN" | "REGISTER";
 
 const AuthForm = () => {
-  const [variant, setVariant] = useState<Variant>("REGISTER");
+  const [variant, setVariant] = useState<Variant>("LOGIN");
   const [isLoading, setIsLoading] = useState(false);
 
   const toggleVariant = useCallback(() => {
@@ -36,15 +39,38 @@ const AuthForm = () => {
   const onSubmit: SubmitHandler<FieldValues> = (data) => {
     setIsLoading(true);
     if (variant === "REGISTER") {
-      axios.post("/api/register" , data)
+      axios
+        .post("/api/register", data)
+        .catch(() => toast.error("Something went wrong!"))
+        .finally(() => setIsLoading(false));
     }
     if (variant === "LOGIN") {
-      //nextauth signin
+      signIn("credentials", { ...data, redirect: false })
+        .then((callback) => {
+          if (callback?.error) {
+            toast.error("Invalid credentials");
+          }
+          if (callback?.ok && !callback?.error) {
+            toast.success("Logged in!");
+          }
+        })
+        .finally(() => setIsLoading(false));
     }
   };
 
   const socialAction = (action: string) => {
     setIsLoading(true);
+    signIn(action, { redirect: false })
+      .then((callback) => {
+        if (callback?.error) {
+          toast.error('Invalid credentials!');
+        }
+        if (callback?.ok) {
+          toast.success('Logged in!');
+          // router.push('/conversations')
+        }
+      })
+      .finally(() => setIsLoading(false));
   };
 
   return (
@@ -88,42 +114,42 @@ const AuthForm = () => {
             label="Password"
             type="password"
           />
-           <div>
+          <div>
             <Button disabled={isLoading} fullWidth type="submit">
-              {variant === 'LOGIN' ? 'Sign in' : 'Register'}
+              {variant === "LOGIN" ? "Sign in" : "Register"}
             </Button>
           </div>
-          
+
           <div className="mt-6">
-          <div className="relative">
-            <div 
-              className="
+            <div className="relative">
+              <div
+                className="
                 absolute 
                 inset-0 
                 flex 
                 items-center
               "
-            >
-              <div className="w-full border-t border-gray-300" />
+              >
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-white px-2 text-gray-500">
+                  Or continue with
+                </span>
+              </div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-white px-2 text-gray-500">
-                Or continue with
-              </span>
-            </div>
-          </div>
 
-          <div className="mt-6 flex gap-2">
-            <AuthSocialButton 
-              icon={BsGithub} 
-              onClick={() => socialAction('github')} 
-            />
-            <AuthSocialButton 
-              icon={BsGoogle} 
-              onClick={() => socialAction('google')} 
-            />
+            <div className="mt-6 flex gap-2">
+              <AuthSocialButton
+                icon={BsGithub}
+                onClick={() => socialAction("github")}
+              />
+              <AuthSocialButton
+                icon={BsGoogle}
+                onClick={() => socialAction("google")}
+              />
+            </div>
           </div>
-        </div>
         </form>
       </div>
     </div>
