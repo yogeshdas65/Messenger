@@ -7,23 +7,26 @@ import AuthSocialButton from "./AuthSocialButton";
 import { BsGithub, BsGoogle } from "react-icons/bs";
 import axios from "axios";
 import { toast } from "react-hot-toast";
-import { signIn , useSession } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import router from "next/router";
+import { useRouter } from "next/navigation";
 
 
 type Variant = "LOGIN" | "REGISTER";
 
 const AuthForm = () => {
-  const  session = useSession()
+  const session = useSession()
+  const router = useRouter()
   const [variant, setVariant] = useState<Variant>("REGISTER");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if(session?.status === "authenticated"){
+    if (session?.status === "authenticated") {
+      router.push("/users")
       console.log("session", session)
     }
   }, [session?.status])
-  
+
 
   const toggleVariant = useCallback(() => {
     if (variant === "LOGIN") {
@@ -47,9 +50,10 @@ const AuthForm = () => {
 
   const onSubmit: SubmitHandler<FieldValues> = (data) => {
     setIsLoading(true);
+
     if (variant === "REGISTER") {
       axios
-        .post("/api/register", data)
+        .post("/api/register", data).then(() => signIn("credentials", data))
         .catch(() => toast.error("Something went wrong!"))
         .finally(() => setIsLoading(false));
     }
